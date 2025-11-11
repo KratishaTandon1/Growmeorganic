@@ -1,73 +1,58 @@
-# React + TypeScript + Vite
+Growmeorganic - React Internship Assignment: Persistent Data Table
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This project implements a single-page data application using **React, TypeScript, and PrimeReact** to display artwork data from the Art Institute of Chicago API. It strictly adheres to all technical requirements, focusing specifically on server-side pagination and persistent row selection without prefetching data.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 🛠️ Tech Stack
 
-## React Compiler
+* **Framework:** React (Vite setup)
+* **Language:** TypeScript
+* **UI Library:** PrimeReact (DataTable, Button, OverlayPanel)
+* **Styling:** Tailwind CSS (for layout and custom components)
+* **API:** Art Institute of Chicago API (`https://api.artic.edu/api/v1/artworks`)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+### 🚀 Setup and Run Instructions
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1.  **Clone or Download:** Ensure you have the project files locally.
+2.  **Install Dependencies:** Navigate to the project root and install all required packages:
+    ```bash
+    npm install
+    ```
+3.  **Run Development Server:** Start the application using Vite:
+    ```bash
+    npm run dev
+    ```
+4.  **Access App:** The application will be available in your browser at the local URL provided by Vite (e.g., `http://localhost:5173/`).
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### ✅ Core Implementation Strategy: Persistent Selection
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+The core challenge of this assignment was implementing persistent row selection while strictly adhering to the **anti-prefetching rule** (i.e., you cannot fetch data from other pages to determine selection status).
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+#### 1. The ID Set Strategy (Persistence)
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Instead of storing selected row objects, the application uses a single global state set to track selections:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+* **State:** `selectedRowIds: Set<number>`
+* **How it Works:**
+    * When a user selects or deselects a row, the row's unique `id` is added to or removed from the `selectedRowIds` Set.
+    * The table's selection (`currentSelection`) is a **memoized value** that filters the `artworks` (the data currently loaded on the screen) against the global `selectedRowIds` Set.
+    * When the user navigates pages (and new artwork data is loaded), the `selectedRowIds` Set remains unchanged. The new page's data is simply checked against the persistent ID Set, ensuring correct selection state is displayed upon return to previous pages.
+
+#### 2. Anti-Prefetching Compliance (Custom Selection)
+
+The assignment strictly forbids fetching data from other pages for bulk selection. The `handleCustomRowSelection` function is implemented to comply with this check:
+
+* The function only operates on the `artworks` array, which contains only the data currently loaded by the API for the visible page.
+* It uses `artworks.slice(0, count)` to determine which rows (on the current page) should be toggled, **preventing any logic that would iterate through or fetch subsequent pages**, thus preserving application performance and memory.
+
+#### 3. Server-Side Pagination
+
+The component handles pagination in a "lazy" loading mode:
+
+* The `onPage` event from the PrimeReact DataTable is used to calculate the required API page number (`currentPage = Math.floor(first / rows) + 1`).
+* The `fetchData` function is triggered only when the page number changes, ensuring data is always fetched from the server page by page.
